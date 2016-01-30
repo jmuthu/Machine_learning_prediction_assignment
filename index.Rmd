@@ -1,5 +1,5 @@
 ---
-title: "Prediction of exercise quality using models trained with accelerometers data "
+title: "Prediction of exercise quality using models trained with accelerometers data"
 author: "Joe"
 date: "30th Janurary 2015"
 output: html_document
@@ -14,11 +14,11 @@ As the prediction is a multi classification problem, the models chosen were as r
 The best model was randomforest with an accuracy of 0.9998 and Kappa of 0.9997 even though boosting also performed very well. 
 Using this model, we predicted the given test data for quality of the exercises.
 
-## Data Analysis
+Git repository for the above analysis is at https://github.com/jmuthu/Machine_learning_prediction_assignment
+
+## Exploratory Analysis
 ```{r, cache=TRUE, echo=FALSE}
 library(caret)
-library(plyr)
-library(dplyr)
 set.seed(32343)
 data <- read.csv("pml-training.csv")
 testing <- read.csv("pml-testing.csv")
@@ -42,7 +42,7 @@ data <- data[,-nzv]
 # Checking for missing data
 missing <- mean(is.na(data))
 data_na_count <- sapply(data, function(y) sum(is.na(y) | y == ""))
-count(data_na_count)
+as.data.frame(table(data_na_count))
 data <- data[,names(subset(data_na_count,data_na_count==0))]
 te_complete <- testing[,names(testing) %in% names(data)]
 
@@ -96,3 +96,4 @@ confusionMatrix(predGbm, validation$classe)
 
 stopCluster(cluster)
 ```
+## Conclusion

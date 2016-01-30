@@ -73,22 +73,25 @@ img {
 <p>The dataset has been preprocessed and cleaned of irrevelant/not available columns. Highly correlated predictors have been eliminated. Predictors have been reduced from 160 variables to 34 variables after preprocessing.</p>
 <p>As the prediction is a multi classification problem, the models chosen were as random forest and boosting which perform well on multi classification. The data was split into training and test set. Models were trained on training data with cross validation and finally the best model was chosen on the prediction on the testing set.</p>
 <p>The best model was randomforest with an accuracy of 0.9998 and Kappa of 0.9997 even though boosting also performed very well. Using this model, we predicted the given test data for quality of the exercises.</p>
+<p>Git repository for the above analysis is at <a href="https://github.com/jmuthu/Machine_learning_prediction_assignment" class="uri">https://github.com/jmuthu/Machine_learning_prediction_assignment</a></p>
 </div>
-<div id="data-analysis" class="section level2">
-<h2>Data Analysis</h2>
+<div id="exploratory-analysis" class="section level2">
+<h2>Exploratory Analysis</h2>
 <pre><code>## [1] &quot;classe&quot;     &quot;problem_id&quot;</code></pre>
 </div>
 <div id="preprocessing" class="section level2">
 <h2>Preprocessing</h2>
 <pre><code>## [1] 0</code></pre>
-<pre><code>##       x freq
-## 1     0   57
-## 2 19216   41</code></pre>
+<pre><code>##   data_na_count Freq
+## 1             0   57
+## 2         19216   41</code></pre>
 <pre><code>##       Min.    1st Qu.     Median       Mean    3rd Qu.       Max. 
 ## -0.9920000 -0.1042000  0.0015250  0.0001378  0.0861400  0.9809000</code></pre>
 </div>
 <div id="model-selection" class="section level2">
 <h2>Model Selection</h2>
+<pre><code>## Loading required package: foreach</code></pre>
+<pre><code>## Loading required package: iterators</code></pre>
 <pre><code>## Loading required package: randomForest</code></pre>
 <pre><code>## randomForest 4.6-12</code></pre>
 <pre><code>## Type rfNews() to see new features/changes/bug fixes.</code></pre>
@@ -140,18 +143,6 @@ img {
 ##     cluster</code></pre>
 <pre><code>## Loading required package: splines</code></pre>
 <pre><code>## Loaded gbm 2.1.1</code></pre>
-<pre><code>## Loading required package: plyr</code></pre>
-<pre><code>## -------------------------------------------------------------------------</code></pre>
-<pre><code>## You have loaded plyr after dplyr - this is likely to cause problems.
-## If you need functions from both plyr and dplyr, please load plyr first, then dplyr:
-## library(plyr); library(dplyr)</code></pre>
-<pre><code>## -------------------------------------------------------------------------</code></pre>
-<pre><code>## 
-## Attaching package: 'plyr'</code></pre>
-<pre><code>## The following objects are masked from 'package:dplyr':
-## 
-##     arrange, count, desc, failwith, id, mutate, rename, summarise,
-##     summarize</code></pre>
 <pre><code>## Confusion Matrix and Statistics
 ## 
 ##           Reference
@@ -183,6 +174,9 @@ img {
 ## Detection Rate         0.2836   0.1933   0.1731   0.1637   0.1835
 ## Detection Prevalence   0.2838   0.1949   0.1731   0.1644   0.1837
 ## Balanced Accuracy      0.9984   0.9985   0.9965   0.9990   0.9993</code></pre>
+</div>
+<div id="conclusion" class="section level2">
+<h2>Conclusion</h2>
 </div>
 
 
