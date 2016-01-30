@@ -5,53 +5,89 @@ date: "30th Janurary 2015"
 output: html_document
 ---
 ## Executive Summary
-This report proposes a model to predict the quality of exercise performed by individuals. Different models are trained using data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. Best model is chosen based on the accuracy. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways.  More information is available at here : http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset).
+This report proposes a model to predict the quality of exercise based on data gathered by wearable accelerometers. Different models are trained using data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways.  More information is available at here : http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset). The best model is chosen based on the prediction accuracy obtained on the cross validation dataset.
 
-The dataset has been preprocessed and cleaned of irrevelant/not available columns. Highly correlated predictors have been eliminated. Predictors have been reduced from 160 variables to 34 variables after preprocessing. 
+The dataset has been preprocessed and cleaned of irrevelant/duplicate predictors. Highly correlated predictors have been eliminated. Predictors have been reduced from 160 variables to 34 variables after preprocessing. 
 
-As the prediction is a multi classification problem, the models chosen were as random forest and boosting which perform well on multi classification. The data was split into training and test set. Models were trained on training data with cross validation and finally the best model was chosen on the prediction on the testing set.
+As the prediction is a multi classification problem, the models chosen were as random forest and boosting which perform well on multi classification. The data was split into training and test set. Models were trained on training data with repeated cross validation and finally the best model was chosen on the prediction on the cross validation set. 
 
-The best model was randomforest with an accuracy of 0.9998 and Kappa of 0.9997 even though boosting also performed very well. 
-Using this model, we predicted the given test data for quality of the exercises.
+The best model was randomforest with an accuracy of 0.9998 and Kappa of 0.9997. 
 
 Git repository for the above analysis is at https://github.com/jmuthu/Machine_learning_prediction_assignment
 
 ## Exploratory Analysis
+Lets summarize the training and test datasets basically the total count and also check if all columns are same in both data sets.
+
 ```{r, cache=TRUE, echo=FALSE}
 library(caret)
 set.seed(32343)
 data <- read.csv("pml-training.csv")
 testing <- read.csv("pml-testing.csv")
-data_row <- nrow(data)
-testing_row <- nrow(testing)
 tr <- names(data)
 te <- names(testing)
-c(tr[which(tr != te)], te[which(tr != te)])
+data_summ <- data.frame("Details"= "Row count", "Training" = nrow(data), "Testing" = nrow(testing), stringsAsFactors=FALSE)
+data_summ <- rbind(data_summ, c("Missing columns", te[which(tr != te)], tr[which(tr != te)]))
+data_summ
 ```
+The sample size of training is around 19622 which is a medium size. In the test set, the output column "classe" is missing and it has an additional index column "problem_id" which is missing in the training set. We can ignore that "problem_id" column as it is just an index and classe needs to be predicted for the test set. Except for these two columns all the other columns are same in test and training set.
+
+Lets look at some the columns in the training set.
+```{r, cache=TRUE, echo=FALSE}
+head(tr,20)
+```
+There are few time measurements, user name, index and rest are all measurements from the four devices namely roll belt, arm, dumbell and forearm. 
 
 ## Preprocessing
-```{r, cache=TRUE, echo=FALSE}
-# Removed duplicate date and irrevelant index column X
-sum(format(as.POSIXct(data$raw_timestamp_part_1, origin="1970-01-01", tz="UTC"),"%d/%m/%Y %H:%M") != data$cvtd_timestamp)
-data <- data[,c(-1,-5)]
+Lets do some preprocessing and reduce the number of variables. 
 
+1)Duplicate/Irrevelant predictors: The index column "X" is not relevant. The column "raw_timestamp_part_1" looks like a timestamp value for the date column "cvtd_timestamp". 
+Lets check convert the timestamp value to date and compare them. Lets check if any of these mismatch. 
+
+```{r, cache=TRUE}
+sum(format(as.POSIXct(data$raw_timestamp_part_1, origin="1970-01-01", tz="UTC"),"%d/%m/%Y %H:%M") != data$cvtd_timestamp)
+```
+
+The mismatch count is zero so both time fields are same. Lets remove the X and cvtd_timestamp columns. 
+
+```{r, cache=TRUE, echo=FALSE}
+data <- data[,c(-1,-5)]
+```
+
+2)Near Zero variablity predictor: Lets find those predictors using nearZeroVar funciton and remove it. 
+```{r, cache=TRUE, echo=FALSE}
 # Remove columns that have no or near zero variability
 nzv <- nearZeroVar(data)
 data <- data[,-nzv]
+missing <- round(mean(is.na(data))*100,2)
+```
 
+About `r length(nzv)` predictors have no variablity at all. 
+
+3)Missing values : Lets remove predictors or/and rows that have missing values. There are about `r missing`% missing values. Lets see the distribution of missing value count for each predictor
+```{r, cache=TRUE, echo=FALSE}
 # Checking for missing data
-missing <- mean(is.na(data))
+
 data_na_count <- sapply(data, function(y) sum(is.na(y) | y == ""))
 as.data.frame(table(data_na_count))
 data <- data[,names(subset(data_na_count,data_na_count==0))]
-te_complete <- testing[,names(testing) %in% names(data)]
+```
 
+There are 41 predictors that have a huge count of missing values (19216). Lets remove these predictors from the dataset.
+
+4)Highly Correlated Predictors : Lets remove the highly correlated predictors from the data set which have correlation index of greater than 0.75. Lets convert the character predictors "user_name" and "classe" to numeric to compute Correlation.
+
+Summary of the correlation distribution in the training set is show below. 
+
+```{r, cache=TRUE, echo=FALSE}
 # Convert character columns to numeric
 data$user_name <- factor(data$user_name)
 user_levels <- levels(data$user_name)
 data$user_name <- as.numeric(data$user_name)
 testing$user_name <- as.numeric(factor(testing$user_name, levels=user_levels))
-data$classe <- as.numeric(factor(data$classe))
+
+data$classe <- factor(data$classe)
+classe_levels <- levels(data$classe)
+data$classe <- as.numeric(data$classe)
 
 # correlation 
 data_cor <- cor(data)
@@ -61,7 +97,13 @@ data_complete <- data[,-highlyCor]
 data_complete$classe <- factor(data_complete$classe)
 ```
 
+There were `r length(highlyCor)` highly correlated predictors and these can be removed as well. 
+
+Now we have brought down the predictors from `r length(tr)` in the original dataset to `r length(colnames(data_complete))`. 
+The data set looks clean with no missing values and all irrevelant/duplicate predictors have been removed. 
+
 ## Model Selection
+Lets first partition the data 
 ```{r, cache=TRUE, echo=FALSE}
 # Split data into training and testing set. 
 train_index <- createDataPartition(data_complete$classe,p=0.75, list=FALSE)
@@ -74,26 +116,37 @@ library(parallel)
 library(doParallel)
 cluster <- makeCluster(detectCores() - 2) # convention to leave 1 cor e for OS
 registerDoParallel(cluster)
-fitControl <- trainControl(method = "cv", number = 10, allowParallel = TRUE)
+fitControl <- trainControl(method="cv", number=10,  allowParallel = TRUE)
 model = readRDS("rfmodel.rds")
 if (is.null(model)) {
         tm <- proc.time()
+        set.seed(32343)
         model <- train(classe~., data=training, method="rf", trControl = fitControl)
         rftime <- proc.time() - tm
 }
 
-pred <- predict(model, newdata=validation)
-confusionMatrix(pred, validation$classe)
-
 gbmModel = readRDS("gbmModel.rds")
 if (is.null(gbmModel)) {
         tm <- proc.time()        
+        set.seed(32343)
         gbmModel <- train(classe~., data=training, method="gbm", trControl = fitControl)
         gbmtime <- proc.time()-tm
 }
-predGbm <- predict(gbmModel, newdata = validation)
-confusionMatrix(predGbm, validation$classe)
+#predGbm <- predict(gbmModel, newdata = validation)
+#confusionMatrix(predGbm, validation$classe)
+results <- resamples(list(RF=model, GBM=gbmModel))
+# summarize the distributions
+summary(results)
+# boxplots of results
+bwplot(results)
+
+pred <- predict(model, newdata=validation)
+confusionMatrix(pred, validation$classe)
+
+test_pred <- predict(model, newdata=testing)
+sapply(test_pred, function(x) classe_levels[x])
 
 stopCluster(cluster)
 ```
+
 ## Conclusion
