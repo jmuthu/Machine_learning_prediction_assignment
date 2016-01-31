@@ -92,8 +92,10 @@ data_complete$classe <- factor(data_complete$classe)
 There were `r length(highlyCor)` highly correlated predictors and these can be removed as well. 
 
 Now we have brought down the predictors from `r length(tr)` in the original dataset to `r length(colnames(data_complete))`. 
-The data set looks clean with no missing values and all irrevelant/duplicate predictors have been removed. 
-
+The data set looks clean with no missing values and all irrevelant/duplicate predictors have been removed. Following are the selected predictors which has more forearm measurements compared to other meters.
+```{r, cache=TRUE, echo=FALSE,message=FALSE}
+names(data_complete[,-35])
+```
 ## Model Selection
 The output variable classe has five different exercise categories of which A is correct execution and the rest (B,C,D,E) are all incorrect executions. As this is a multi classification problem, we will choose the following models as they work well for classification problems.
 
@@ -102,7 +104,7 @@ The output variable classe has five different exercise categories of which A is 
 * Random Forest
 
 The best performing model will be chosen based on 10 fold cross validation on the training data. 
-We will split (25%) of the training set into a separate testing data which will be used with the best model once to calculate final accuracy. 
+We will split 25% of the training set into a separate testing data and this testing data will be used with the best model once to calculate final accuracy. 
 As these models take time, we will leverage the parallel processing functionality from caret package. Lets also normalize the training data as it performs well with these models.
 So lets train all these models with the same 10 fold cross validation and normalization.
 
@@ -119,6 +121,7 @@ cluster <- makeCluster(detectCores() - 2) # convention to leave 1 cor e for OS
 registerDoParallel(cluster)
 fitControl <- trainControl(method="cv", number=10,  allowParallel = TRUE)
 model = readRDS("rfmodel.rds")
+rftime = readRDS("rftime.rds")
 if (is.null(model)) {
         tm <- proc.time()
         set.seed(32343)
@@ -127,6 +130,7 @@ if (is.null(model)) {
 }
 
 gbmModel = readRDS("gbmModel.rds")
+gbmtime = readRDS("gbmtime.rds")
 if (is.null(gbmModel)) {
         tm <- proc.time()        
         set.seed(32343)
@@ -134,6 +138,7 @@ if (is.null(gbmModel)) {
         gbmtime <- proc.time()-tm
 }
 svmModel = readRDS("svmModel.rds")
+svmtime = readRDS("svmtime.rds")
 if (is.null(gbmModel)) {
         tm <- proc.time()     
         set.seed(32343)
@@ -141,21 +146,22 @@ if (is.null(gbmModel)) {
         svmtime <- proc.time()-tm
 }
 ```
-Lets check the in sample error for these models and for that we will use the accuracy and kappa metrics. Comparison is shown below for these 3 models based on the performance on the cross validation set. 
+Lets check the in sample error for these models and for that we will use the accuracy  (1- sample error) and kappa metrics. Comparison is shown below for these 3 models based on the performance on the cross validation set. 
 ```{r, cache=TRUE,echo=FALSE,message=FALSE}
 results <- resamples(list(RandomForest=model, GradientBoosting=gbmModel, SupportVector=svmModel))
 # summarize the distributions
 summary(results)
 # boxplots of results
 bwplot(results)
+mean_rf <- round(mean(results$values[,2]),4)
 ```
 
 If you compare the means of accuracy and kappa above, Random forest performed the best among the models though gradient boosting is pretty close. 
 Lets choose Random forest as our final Model as it has the highest mean accuracy and kappa. Random forest has about `r model$finalModel$ntree` trees. 
 
 Since the testing dataset is extracted from the same training data and also from the same users, we can expect the same accuracy as the in-sample accuracy. 
-We can estimate the accuracy (1- out sample error) on the testing dataset to be around the mean of the sample accuracy which is 0.9987.
-So lets predict on the testing dataset and check the accuracy and kappa metrics as shown below
+We can estimate the accuracy on the testing dataset to be around the mean of the in-sample accuracy which is `r mean_rf`.
+So lets predict on the testing dataset and the accuracy and kappa metrics are shown below
 ```{r, cache=TRUE,echo=FALSE,message=FALSE}
 pred <- predict(model, newdata=validation)
 confusionMatrix(pred, validation$classe)
