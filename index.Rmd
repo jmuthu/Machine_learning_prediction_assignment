@@ -1,7 +1,7 @@
 ---
 title: "Prediction of exercise quality using models trained with accelerometers data"
 author: "Joe"
-date: "30th Janurary 2015"
+date: "31 Janurary 2016"
 output: html_document
 ---
 ## Executive Summary
@@ -11,12 +11,12 @@ The training dataset has been preprocessed and cleaned of irrevelant/duplicate p
 
 As the prediction is a multi classification problem, the models chosen were random forest and boosting which perform well on multi classification. The data was split into training and test set. Models were trained on training data with K fold cross validation and finally the best model was chosen on the prediction on the cross validation set. 
 
-The model that performed the best was randomforest and it had an accuracy of 0.9988 and Kappa of 0.9985 on independent testing dataset.
+The model that performed the best was Random forest and it had an accuracy of 0.9988 and Kappa of 0.9985 on independent testing dataset.
 
 Git repository for the above analysis is at https://github.com/jmuthu/Machine_learning_prediction_assignment
 
 ## Exploratory Analysis
-Lets look at the training and test datasets, check the total count and also see if all columns are same in both data sets.
+Lets analyze the training and test datasets provided, summarize the total count and also see if all columns are same in both data sets.
 
 ```{r, cache=TRUE, echo=FALSE,message=FALSE}
 library(caret)
@@ -29,7 +29,7 @@ data_summ <- data.frame("Details"= "Row count", "Training" = nrow(data), "Testin
 data_summ <- rbind(data_summ, c("Missing columns", te[which(tr != te)], tr[which(tr != te)]))
 data_summ
 ```
-The sample size of training is around 19622 which is a good medium size dataset. In the test set, the output column "classe" is missing and it has an additional index column "problem_id" which is missing in the training set. We can ignore that "problem_id" column as it is just an index and "classe" variable needs to be predicted for the test set. Except for these two columns all the other columns are same in test and training set.
+The sample size of training is around 19622 which is a good medium size dataset. In the test set, the output column "classe" is missing and it has an additional index column "problem_id" which is missing in the training set. We can ignore both the "problem_id" column as it is just an index and the "classe" column which needs to be predicted for the test set. Except for these two columns all the other columns are same in test and training set.
 
 Lets look at some the columns in the training set. There are totally `r length(tr)` variables in the training dataset
 ```{r, cache=TRUE, echo=FALSE,message=FALSE}
@@ -37,11 +37,10 @@ head(tr,20)
 ```
 There are few time measurements, user name, index and rest are all measurements from the four devices namely roll belt, arm, dumbell and forearm. 
 
-## Preprocessing
+## Pre-processing
 Lets do some preprocessing and reduce the number of variables which are irrevelant or duplicate or empty. 
 
-#### Duplicate/Irrevelant predictors
-The index column "X" is not relevant. The column "raw_timestamp_part_1" looks like a timestamp value for the date column "cvtd_timestamp". 
+**Duplicate/Irrevelant predictors :** The index column "X" is not relevant. The column "raw_timestamp_part_1" looks like a timestamp value for the date column "cvtd_timestamp". 
 Lets convert the timestamp value to date and compare them. Lets check if any of these mismatch. 
 ```{r, cache=TRUE,message=FALSE}
 sum(format(as.POSIXct(data$raw_timestamp_part_1, origin="1970-01-01", tz="UTC"),"%d/%m/%Y %H:%M") != data$cvtd_timestamp)
@@ -49,20 +48,15 @@ sum(format(as.POSIXct(data$raw_timestamp_part_1, origin="1970-01-01", tz="UTC"),
 The mismatch count is zero so both time fields are same. Lets remove the X and cvtd_timestamp columns. 
 ```{r, cache=TRUE, echo=FALSE,message=FALSE}
 data <- data[,c(-1,-5)]
-```
-
-####  Near Zero variablity predictor 
-
-```{r, cache=TRUE, echo=FALSE,message=FALSE}
 # Remove columns that have no or near zero variability
 nzv <- nearZeroVar(data)
 data <- data[,-nzv]
 missing <- round(mean(is.na(data))*100,2)
 ```
-Lets find those predictors using nearZeroVar funciton and remove it. About `r length(nzv)` predictors have no variablity at all. 
 
-#### Missing values 
-Lets remove predictors or/and rows that have missing values. There are about `r missing`% missing values in the training dataset. Lets see the distribution of missing value count for each predictor
+**Near Zero variablity predictor :** Lets find those predictors using nearZeroVar funciton and remove it. About `r length(nzv)` predictors have no variablity at all. 
+
+**Missing values :** Lets remove predictors or/and rows that have missing values. There are about `r missing`% missing values in the training dataset. Lets see the distribution of missing value count for each predictor
 ```{r, cache=TRUE, echo=FALSE,message=FALSE}
 # Checking for missing data
 
@@ -72,8 +66,7 @@ data <- data[,names(subset(data_na_count,data_na_count==0))]
 ```
 There are 41 predictors that have a huge count of missing values (19216). Lets remove these predictors from the dataset.
 
-#### Highly Correlated Predictors 
-Lets remove the highly correlated predictors from the data set which have correlation index of greater than 0.75. First we need to convert the character predictors "user_name" and "classe" to numeric to compute correlation.
+**Highly Correlated Predictors :** Lets remove the highly correlated predictors from the data set which have correlation index of greater than 0.75. First we need to convert the character predictors "user_name" and "classe" to numeric to compute correlation.
 
 Summary of the correlation distribution in the training set is show below. 
 
@@ -110,8 +103,8 @@ The output variable classe has five different exercise categories of which A is 
 
 The best performing model will be chosen based on 10 fold cross validation on the training data. 
 We will split (25%) of the training set into a separate testing data which will be used with the best model once to calculate final accuracy. 
-As these models take time, we will leverage the parallel processing functionality from caret package. 
-Lets train the model with the same 10 cross validation test.
+As these models take time, we will leverage the parallel processing functionality from caret package. Lets also normalize the training data as it performs well with these models.
+So lets train all these models with the same 10 fold cross validation and normalization.
 
 ```{r, cache=TRUE,echo=FALSE,message=FALSE}
 # Split data into training and testing set. 
@@ -150,21 +143,24 @@ if (is.null(gbmModel)) {
 ```
 Lets check the in sample error for these models and for that we will use the accuracy and kappa metrics. Comparison is shown below for these 3 models based on the performance on the cross validation set. 
 ```{r, cache=TRUE,echo=FALSE,message=FALSE}
-results <- resamples(list(RF=model, GBM=gbmModel, SVM=svmModel))
+results <- resamples(list(RandomForest=model, GradientBoosting=gbmModel, SupportVector=svmModel))
 # summarize the distributions
 summary(results)
 # boxplots of results
 bwplot(results)
 ```
-If you compare the accuracy and kappa means above, Random forest performed the best among the models though gradient boosting is only slightly lower. Lets choose Random forest as our final Model with accuracy of 0.9986 and kappa of 0.9983. Random forest has about `r model$finalModel$ntree` trees. 
 
-So based on the cross validation test performance, we can estimate the accuracy (1- out sample error) on the testing dataset to be around min and max of the in sample error which is between 0.9952 to 1.0. 
-So lets predict on the testing dataset and check the accuracy and kappa
+If you compare the means of accuracy and kappa above, Random forest performed the best among the models though gradient boosting is pretty close. 
+Lets choose Random forest as our final Model as it has the highest mean accuracy and kappa. Random forest has about `r model$finalModel$ntree` trees. 
+
+Since the testing dataset is extracted from the same training data and also from the same users, we can expect the same accuracy as the in-sample accuracy. 
+We can estimate the accuracy (1- out sample error) on the testing dataset to be around the mean of the sample accuracy which is 0.9987.
+So lets predict on the testing dataset and check the accuracy and kappa metrics as shown below
 ```{r, cache=TRUE,echo=FALSE,message=FALSE}
 pred <- predict(model, newdata=validation)
 confusionMatrix(pred, validation$classe)
 ```
-The out sample error is 0.9988 which is close to our prediction. So our Random Forest model has fitted very well for predicting the exercise quality. 
+The out sample error is `r round(mean(pred==validation$classe),4)` which is better than our prediction. So our Random Forest model has fitted very well for predicting the exercise quality. 
 
 Finally lets predict the classe levels for the 20 test cases provided in the assignment using random Forest model. 
 ```{r, cache=TRUE,echo=FALSE,message=FALSE}
