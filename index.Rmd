@@ -11,7 +11,7 @@ The training dataset has been preprocessed and cleaned of irrevelant/duplicate p
 
 As the prediction is a multi classification problem, the models chosen were random forest and boosting which perform well on multi classification. The data was split into training and test set. Models were trained on training data with K fold cross validation and finally the best model was chosen on the prediction on the cross validation set. 
 
-The model that performed the best was Random forest and it had an accuracy of 0.9988 and Kappa of 0.9985 on independent testing dataset.
+The model that performed the best was Random forest and it had an accuracy of 0.999 and Kappa of 0.999 on independent testing dataset.
 
 Git repository for the above analysis is at https://github.com/jmuthu/Machine_learning_prediction_assignment
 
